@@ -1,0 +1,222 @@
+/*
+ * Inter ships as a bundled variable font. The library's tokens name the family
+ * "Inter", so alias that name onto the packaged file: one download, no network.
+ */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--openui-font-size-md);
+  font-weight: var(--openui-font-weight-regular);
+  font-variation-settings: var(--openui-font-variation-regular);
+  letter-spacing: var(--openui-letter-spacing-normal);
+  line-height: var(--openui-line-height-body);
+  -webkit-text-size-adjust: 100%;
+}
+
+b,
+strong {
+  font-variation-settings: var(--openui-font-variation-medium);
+}
+
+[data-openui-devtools-root] {
+  font-variation-settings: normal;
+}
+
+/* The window is the page: the shell never scrolls, only its inner panels do. */
+.openui-desktop-shell {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Chrome stays inert like a native window; message content keeps its selection. */
+.openui-agent-sidebar-container,
+.openui-agent-thread-header {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+/* Settings route: library tokens only, so it follows light/dark by itself. */
+.openui-desktop-settings {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding: var(--openui-space-3xl) var(--openui-space-l);
+}
+
+.openui-desktop-settings__panel {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--openui-space-m);
+}
+
+.openui-desktop-settings__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--openui-space-l);
+  width: 100%;
+}
+
+.openui-desktop-settings__title {
+  margin: 0;
+  font: var(--openui-text-heading-md);
+  letter-spacing: var(--openui-text-heading-md-letter-spacing);
+  font-weight: 500;
+  font-variation-settings: normal;
+  color: var(--openui-text-neutral-primary);
+}
+
+.openui-desktop-settings__subtitle {
+  margin: var(--openui-space-2xs) 0 0;
+  max-width: 46ch;
+  font: var(--openui-text-body-sm);
+  letter-spacing: var(--openui-text-body-sm-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-regular);
+  color: var(--openui-text-neutral-secondary);
+}
+
+.openui-desktop-settings__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--openui-space-xs);
+  padding: var(--openui-space-3xs) var(--openui-space-s);
+  border: 1px solid var(--openui-border-default);
+  border-radius: var(--openui-radius-full);
+  background-color: var(--openui-highlight-subtle);
+  font: var(--openui-text-label-xs);
+  letter-spacing: var(--openui-text-label-xs-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-regular);
+  color: var(--openui-text-neutral-secondary);
+}
+
+.openui-desktop-settings__dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: var(--openui-radius-full);
+  background-color: var(--openui-text-neutral-tertiary);
+}
+
+.openui-desktop-settings__badge.is-set .openui-desktop-settings__dot {
+  background-color: var(--openui-text-success-primary);
+}
+
+.openui-desktop-settings__badge.is-unset .openui-desktop-settings__dot {
+  background-color: var(--openui-text-alert-primary);
+}
+
+.openui-desktop-settings__notice {
+  width: 100%;
+  margin: 0;
+  padding: var(--openui-space-s) var(--openui-space-m);
+  border-radius: var(--openui-radius-m);
+  background-color: var(--openui-alert-background);
+  color: var(--openui-text-alert-primary);
+  font: var(--openui-text-body-sm);
+  letter-spacing: var(--openui-text-body-sm-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-regular);
+}
+
+.openui-desktop-settings__notice.is-error {
+  background-color: var(--openui-danger-background);
+  color: var(--openui-text-danger-primary);
+}
+
+.openui-desktop-settings__card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--openui-space-l);
+  padding: var(--openui-space-xl);
+  border: 1px solid var(--openui-border-default);
+  border-radius: var(--openui-radius-l);
+  background-color: var(--openui-sunk-light);
+}
+
+.openui-desktop-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--openui-space-xs);
+}
+
+.openui-desktop-settings__label {
+  font: var(--openui-text-label-sm);
+  letter-spacing: var(--openui-text-label-sm-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-medium);
+  color: var(--openui-text-neutral-primary);
+}
+
+.openui-desktop-settings__hint {
+  font: var(--openui-text-body-xs);
+  letter-spacing: var(--openui-text-body-xs-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-regular);
+  color: var(--openui-text-neutral-tertiary);
+}
+
+.openui-desktop-settings__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--openui-space-m);
+}
+
+.openui-desktop-settings__status {
+  margin: 0;
+  font: var(--openui-text-body-xs);
+  letter-spacing: var(--openui-text-body-xs-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-regular);
+}
+
+.openui-desktop-settings__status.is-ok {
+  color: var(--openui-text-success-primary);
+}
+
+.openui-desktop-settings__status.is-error {
+  color: var(--openui-text-danger-primary);
+}

@@ -1,0 +1,17 @@
+# Normalize to LF in the repo so checkouts are stable across platforms.
+* text=auto eol=lf
+
+# Keep binary assets untouched.
+*.png binary
+*.ico binary
+*.icns binary
+*.woff2 binary
+
+# Windows batch/PowerShell scripts need CRLF to run reliably.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Lockfiles are generated; keep them out of diffs and merge conflicts.
+package-lock.json -diff
+src-tauri/Cargo.lock -diff
