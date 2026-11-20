@@ -65,10 +65,19 @@ export interface SettingsSnapshot {
   baseUrl: string;
   model: string;
   apiKeySet: boolean;
+  temperature: number;
+  maxTokens: number | null;
+  instructions: string | null;
+  weatherTool: boolean;
 }
 
 export interface SettingsPatch {
   baseUrl?: string;
   model?: string;
   apiKey?: string;
+  temperature?: number;
+  maxTokens?: number;
+  instructions?: string;
+  weatherTool?: boolean;
+  removeApiKey?: boolean;
 }

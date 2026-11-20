@@ -77,6 +77,8 @@ pub struct ChatRequest<'a> {
     pub model: &'a str,
     pub messages: Vec<WireMessage>,
     pub tools: Vec<ToolSpec>,
+    pub temperature: f64,
+    pub max_tokens: Option<u32>,
 }
 
 /// A streamed chunk of assistant output, already flattened.
@@ -141,8 +143,8 @@ struct ApiError {
 }
 
 fn parse_chunk(payload: &str) -> Result<Option<Chunk>, String> {
-    let parsed: StreamResponse =
-        serde_json::from_str(payload).map_err(|error| format!("Malformed stream event: {error}"))?;
+    let parsed: StreamResponse = serde_json::from_str(payload)
+        .map_err(|error| format!("Malformed stream event: {error}"))?;
 
     if let Some(error) = parsed.error {
         return Err(error
@@ -150,7 +152,12 @@ fn parse_chunk(payload: &str) -> Result<Option<Chunk>, String> {
             .unwrap_or_else(|| "The provider returned an error".to_string()));
     }
 
-    let Some(delta) = parsed.choices.into_iter().next().and_then(|choice| choice.delta) else {
+    let Some(delta) = parsed
+        .choices
+        .into_iter()
+        .next()
+        .and_then(|choice| choice.delta)
+    else {
         return Ok(None);
     };
 
@@ -161,7 +168,10 @@ fn parse_chunk(payload: &str) -> Result<Option<Chunk>, String> {
         .map(|call| ToolCallDelta {
             index: call.index,
             id: call.id,
-            name: call.function.as_ref().and_then(|function| function.name.clone()),
+            name: call
+                .function
+                .as_ref()
+                .and_then(|function| function.name.clone()),
             arguments: call
                 .function
                 .as_ref()
@@ -187,7 +197,11 @@ pub struct ToolCallAccumulator {
 
 impl ToolCallAccumulator {
     pub fn apply(&mut self, delta: ToolCallDelta) {
-        if let Some(existing) = self.calls.iter_mut().find(|(index, _)| *index == delta.index) {
+        if let Some(existing) = self
+            .calls
+            .iter_mut()
+            .find(|(index, _)| *index == delta.index)
+        {
             let call = &mut existing.1;
             if let Some(id) = delta.id {
                 if !id.is_empty() {
@@ -243,12 +257,19 @@ impl ToolCallAccumulator {
 }
 
 fn build_body(request: &ChatRequest<'_>) -> serde_json::Value {
-    serde_json::json!({
+    let mut body = serde_json::json!({
         "model": request.model,
         "messages": request.messages,
         "tools": request.tools,
         "stream": true,
-    })
+        "temperature": request.temperature,
+    });
+
+    if let Some(max_tokens) = request.max_tokens {
+        body["max_tokens"] = serde_json::json!(max_tokens);
+    }
+
+    body
 }
 
 /// Streams the completion, invoking `on_chunk` for each parsed delta.
@@ -299,7 +320,9 @@ where
                     trimmed.chars().take(400).collect()
                 }
             });
-        return Err(format!("The model provider rejected the request ({status}): {message}"));
+        return Err(format!(
+            "The model provider rejected the request ({status}): {message}"
+        ));
     }
 
     let mut stream = response.bytes_stream();
@@ -350,9 +373,11 @@ mod tests {
 
     #[test]
     fn ignores_role_only_and_empty_deltas() {
-        assert!(parse_chunk(r#"{"choices":[{"delta":{"role":"assistant"}}]}"#)
-            .expect("parse")
-            .is_none());
+        assert!(
+            parse_chunk(r#"{"choices":[{"delta":{"role":"assistant"}}]}"#)
+                .expect("parse")
+                .is_none()
+        );
         assert!(parse_chunk(r#"{"choices":[]}"#).expect("parse").is_none());
     }
 
@@ -422,10 +447,30 @@ mod tests {
             model: "m",
             messages: vec![WireMessage::from(&ChatMessage::text("1", "user", "hi"))],
             tools: Vec::new(),
+            temperature: 0.7,
+            max_tokens: None,
         };
         let body = build_body(&request);
         assert_eq!(body["stream"], true);
         assert_eq!(body["messages"][0]["role"], "user");
+        assert_eq!(body["temperature"], 0.7);
+        assert!(body.get("max_tokens").is_none());
+    }
+
+    #[test]
+    fn max_tokens_is_only_sent_when_configured() {
+        let request = ChatRequest {
+            base_url: "http://x/v1",
+            api_key: "k",
+            model: "m",
+            messages: Vec::new(),
+            tools: Vec::new(),
+            temperature: 1.2,
+            max_tokens: Some(512),
+        };
+        let body = build_body(&request);
+        assert_eq!(body["temperature"], 1.2);
+        assert_eq!(body["max_tokens"], 512);
     }
 
     #[test]

@@ -12,7 +12,17 @@ use crate::contract::{SettingsPatch, SettingsSnapshot};
 
 pub const DEFAULT_BASE_URL: &str = "https://api.openai.com/v1";
 pub const DEFAULT_MODEL: &str = "gpt-5.2";
+pub const DEFAULT_TEMPERATURE: f64 = 0.7;
+const MAX_TOKENS_LIMIT: u32 = 1_000_000;
 const ENV_API_KEY: &str = "OPENAI_API_KEY";
+
+fn default_temperature() -> f64 {
+    DEFAULT_TEMPERATURE
+}
+
+fn default_weather_tool() -> bool {
+    true
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,6 +31,14 @@ pub struct StoredSettings {
     model: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     api_key: Option<String>,
+    #[serde(default = "default_temperature")]
+    temperature: f64,
+    #[serde(default)]
+    max_tokens: Option<u32>,
+    #[serde(default)]
+    instructions: Option<String>,
+    #[serde(default = "default_weather_tool")]
+    weather_tool: bool,
 }
 
 impl Default for StoredSettings {
@@ -29,6 +47,10 @@ impl Default for StoredSettings {
             base_url: DEFAULT_BASE_URL.to_string(),
             model: DEFAULT_MODEL.to_string(),
             api_key: None,
+            temperature: DEFAULT_TEMPERATURE,
+            max_tokens: None,
+            instructions: None,
+            weather_tool: true,
         }
     }
 }
@@ -39,6 +61,10 @@ pub struct ResolvedSettings {
     pub base_url: String,
     pub model: String,
     pub api_key: Option<String>,
+    pub temperature: f64,
+    pub max_tokens: Option<u32>,
+    pub instructions: Option<String>,
+    pub weather_tool: bool,
 }
 
 pub fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -70,8 +96,10 @@ fn persist(path: &Path, settings: &StoredSettings) -> Result<(), String> {
 
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let temp = path.with_extension("tmp");
-    std::fs::write(&temp, bytes).map_err(|error| format!("Could not write {}: {error}", temp.display()))?;
-    std::fs::rename(&temp, path).map_err(|error| format!("Could not replace {}: {error}", path.display()))
+    std::fs::write(&temp, bytes)
+        .map_err(|error| format!("Could not write {}: {error}", temp.display()))?;
+    std::fs::rename(&temp, path)
+        .map_err(|error| format!("Could not replace {}: {error}", path.display()))
 }
 
 fn env_api_key() -> Option<String> {
@@ -97,6 +125,10 @@ pub fn snapshot(path: &Path) -> Result<SettingsSnapshot, String> {
         base_url: settings.base_url,
         model: settings.model,
         api_key_set,
+        temperature: settings.temperature.clamp(0.0, 2.0),
+        max_tokens: settings.max_tokens,
+        instructions: settings.instructions,
+        weather_tool: settings.weather_tool,
     })
 }
 
@@ -115,11 +147,30 @@ pub fn apply_patch(path: &Path, patch: SettingsPatch) -> Result<SettingsSnapshot
             settings.model = trimmed.to_string();
         }
     }
-    if let Some(api_key) = patch.api_key {
+    if patch.remove_api_key == Some(true) {
+        settings.api_key = None;
+    } else if let Some(api_key) = patch.api_key {
         let trimmed = api_key.trim();
         if !trimmed.is_empty() {
             settings.api_key = Some(trimmed.to_string());
         }
+    }
+    if let Some(temperature) = patch.temperature {
+        settings.temperature = temperature.clamp(0.0, 2.0);
+    }
+    if let Some(max_tokens) = patch.max_tokens {
+        settings.max_tokens = if max_tokens == 0 {
+            None
+        } else {
+            Some(max_tokens.min(MAX_TOKENS_LIMIT))
+        };
+    }
+    if let Some(instructions) = patch.instructions {
+        let trimmed = instructions.trim();
+        settings.instructions = (!trimmed.is_empty()).then(|| trimmed.to_string());
+    }
+    if let Some(weather_tool) = patch.weather_tool {
+        settings.weather_tool = weather_tool;
     }
 
     persist(path, &settings)?;
@@ -134,6 +185,13 @@ pub fn resolve(app: &AppHandle) -> Result<ResolvedSettings, String> {
         base_url: settings.base_url.trim_end_matches('/').to_string(),
         model: settings.model,
         api_key,
+        temperature: settings.temperature.clamp(0.0, 2.0),
+        max_tokens: settings.max_tokens,
+        instructions: settings
+            .instructions
+            .map(|text| text.trim().to_string())
+            .filter(|text| !text.is_empty()),
+        weather_tool: settings.weather_tool,
     })
 }
 
@@ -142,7 +200,8 @@ mod tests {
     use super::*;
 
     fn temp_path(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("openui-settings-{name}-{}", uuid::Uuid::new_v4()));
+        let dir =
+            std::env::temp_dir().join(format!("helios-settings-{name}-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).expect("temp dir");
         dir.join("settings.json")
     }
@@ -154,6 +213,70 @@ mod tests {
         assert_eq!(snapshot.base_url, DEFAULT_BASE_URL);
         assert_eq!(snapshot.model, DEFAULT_MODEL);
         assert_eq!(snapshot.api_key_set, env_api_key().is_some());
+        assert_eq!(snapshot.temperature, DEFAULT_TEMPERATURE);
+        assert_eq!(snapshot.max_tokens, None);
+        assert_eq!(snapshot.instructions, None);
+        assert!(snapshot.weather_tool);
+    }
+
+    #[test]
+    fn behavior_settings_persist_and_can_be_cleared() {
+        let path = temp_path("behavior");
+        let snapshot = apply_patch(
+            &path,
+            SettingsPatch {
+                temperature: Some(1.4),
+                max_tokens: Some(2_048),
+                instructions: Some("  Be terse.  ".into()),
+                weather_tool: Some(false),
+                ..Default::default()
+            },
+        )
+        .expect("save");
+
+        assert_eq!(snapshot.temperature, 1.4);
+        assert_eq!(snapshot.max_tokens, Some(2_048));
+        assert_eq!(snapshot.instructions.as_deref(), Some("Be terse."));
+        assert!(!snapshot.weather_tool);
+
+        let clamped = apply_patch(
+            &path,
+            SettingsPatch {
+                temperature: Some(9.0),
+                ..Default::default()
+            },
+        )
+        .expect("clamp");
+        assert_eq!(clamped.temperature, 2.0);
+
+        let cleared = apply_patch(
+            &path,
+            SettingsPatch {
+                max_tokens: Some(0),
+                instructions: Some("   ".into()),
+                ..Default::default()
+            },
+        )
+        .expect("clear");
+        assert_eq!(cleared.max_tokens, None);
+        assert_eq!(cleared.instructions, None);
+    }
+
+    #[test]
+    fn older_settings_files_gain_default_behavior_fields() {
+        let path = temp_path("legacy");
+        std::fs::create_dir_all(path.parent().expect("parent")).expect("dir");
+        std::fs::write(
+            &path,
+            r#"{"baseUrl":"http://localhost:11434/v1","model":"llama3"}"#,
+        )
+        .expect("legacy settings");
+
+        let snapshot = snapshot(&path).expect("snapshot");
+        assert_eq!(snapshot.temperature, DEFAULT_TEMPERATURE);
+        assert!(snapshot.max_tokens.is_none());
+        assert!(snapshot.instructions.is_none());
+        assert!(snapshot.weather_tool);
     }
 
     #[test]
@@ -180,8 +303,34 @@ mod tests {
 
         assert_eq!(snapshot.model, "gpt-4o-mini");
         assert!(snapshot.api_key_set);
-        assert!(!serde_json::to_string(&snapshot).expect("json").contains("sk-test"));
+        assert!(!serde_json::to_string(&snapshot)
+            .expect("json")
+            .contains("sk-test"));
         assert_eq!(load(&path).api_key.as_deref(), Some("sk-test"));
+    }
+
+    #[test]
+    fn an_explicit_flag_removes_the_key() {
+        let path = temp_path("remove");
+        apply_patch(
+            &path,
+            SettingsPatch {
+                api_key: Some("sk-live".into()),
+                ..Default::default()
+            },
+        )
+        .expect("save");
+
+        let snapshot = apply_patch(
+            &path,
+            SettingsPatch {
+                remove_api_key: Some(true),
+                ..Default::default()
+            },
+        )
+        .expect("remove");
+        assert!(!snapshot.api_key_set);
+        assert_eq!(load(&path).api_key, None);
     }
 
     #[test]

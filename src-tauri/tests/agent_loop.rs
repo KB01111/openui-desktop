@@ -10,9 +10,9 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use openui_desktop_lib::agent::{self, AgentContext};
-use openui_desktop_lib::contract::ChatFrame;
-use openui_desktop_lib::contract::ChatMessage;
+use helios_ai_lib::agent::{self, AgentContext};
+use helios_ai_lib::contract::ChatFrame;
+use helios_ai_lib::contract::ChatMessage;
 
 /// One scripted response body: the SSE frames a provider would send.
 fn sse(events: &[&str]) -> String {
@@ -74,7 +74,8 @@ fn serve(responses: Vec<String>) -> (String, Arc<Mutex<Vec<String>>>) {
             sink.lock().expect("lock").push(request_body);
 
             // Split the body across writes to exercise the SSE reassembly path.
-            let head = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n";
+            let head =
+                "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n";
             let _ = socket.write_all(head.as_bytes());
             for chunk in body.as_bytes().chunks(17) {
                 let _ = socket.write_all(chunk);
@@ -90,9 +91,12 @@ fn collect_events(frames: &[ChatFrame]) -> Vec<String> {
     frames
         .iter()
         .filter_map(|frame| match frame {
-            ChatFrame::Event { event } => {
-                Some(serde_json::to_value(event).expect("json")["type"].as_str().unwrap_or("").to_string())
-            }
+            ChatFrame::Event { event } => Some(
+                serde_json::to_value(event).expect("json")["type"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_string(),
+            ),
             _ => None,
         })
         .collect()
@@ -121,6 +125,10 @@ async fn streams_text_and_executes_a_tool_round() {
         base_url,
         model: "test-model".to_string(),
         api_key: "test-key".to_string(),
+        temperature: 0.7,
+        max_tokens: None,
+        instructions: None,
+        weather_tool: true,
         cancelled: Arc::new(AtomicBool::new(false)),
     };
 
@@ -128,7 +136,9 @@ async fn streams_text_and_executes_a_tool_round() {
     let mut emit = |frame: ChatFrame| frames.push(frame);
 
     let history = vec![ChatMessage::text("u1", "user", "weather?")];
-    let outcome = agent::run(&context, &history, &mut emit).await.expect("run");
+    let outcome = agent::run(&context, &history, &mut emit)
+        .await
+        .expect("run");
 
     let types = collect_events(&frames);
     assert_eq!(
@@ -151,7 +161,9 @@ async fn streams_text_and_executes_a_tool_round() {
     assert_eq!(outcome.produced.len(), 3);
     assert_eq!(outcome.produced[0].role, "assistant");
     assert_eq!(
-        outcome.produced[0].tool_calls.as_ref().expect("calls")[0].function.name,
+        outcome.produced[0].tool_calls.as_ref().expect("calls")[0]
+            .function
+            .name,
         "get_weather"
     );
     assert_eq!(outcome.produced[1].role, "tool");
@@ -170,11 +182,50 @@ async fn streams_text_and_executes_a_tool_round() {
         .collect();
     assert_eq!(roles, vec!["system", "user", "assistant", "tool"]);
     assert_eq!(second_request["stream"], true);
-    assert!(second_request["messages"][0]["content"]
+    assert!(
+        second_request["messages"][0]["content"]
+            .as_str()
+            .expect("system prompt")
+            .len()
+            > 1000
+    );
+}
+
+#[tokio::test]
+async fn generation_settings_reach_the_request() {
+    let (base_url, recorded) = serve(vec![sse(&[&text("Hi")])]);
+
+    let context = AgentContext {
+        client: reqwest::Client::new(),
+        base_url,
+        model: "test-model".to_string(),
+        api_key: "test-key".to_string(),
+        temperature: 1.3,
+        max_tokens: Some(256),
+        instructions: Some("Answer in haiku.".to_string()),
+        weather_tool: false,
+        cancelled: Arc::new(AtomicBool::new(false)),
+    };
+
+    let mut frames = Vec::new();
+    let mut emit = |frame: ChatFrame| frames.push(frame);
+    agent::run(
+        &context,
+        &[ChatMessage::text("u1", "user", "hi")],
+        &mut emit,
+    )
+    .await
+    .expect("run");
+
+    let requests = recorded.lock().expect("lock");
+    let body: serde_json::Value = serde_json::from_str(&requests[0]).expect("json");
+    assert_eq!(body["temperature"], 1.3);
+    assert_eq!(body["max_tokens"], 256);
+    assert_eq!(body["tools"].as_array().expect("tools").len(), 0);
+    assert!(body["messages"][0]["content"]
         .as_str()
         .expect("system prompt")
-        .len()
-        > 1000);
+        .contains("Answer in haiku."));
 }
 
 #[tokio::test]
@@ -198,6 +249,10 @@ async fn reports_provider_failures_as_a_run_error() {
         base_url: format!("http://127.0.0.1:{port}"),
         model: "m".to_string(),
         api_key: "k".to_string(),
+        temperature: 0.7,
+        max_tokens: None,
+        instructions: None,
+        weather_tool: true,
         cancelled: Arc::new(AtomicBool::new(false)),
     };
 
@@ -225,6 +280,10 @@ async fn a_cancelled_run_stops_without_erroring() {
         base_url,
         model: "m".to_string(),
         api_key: "k".to_string(),
+        temperature: 0.7,
+        max_tokens: None,
+        instructions: None,
+        weather_tool: true,
         cancelled,
     };
 

@@ -125,33 +125,20 @@ impl ChatMessage {
 #[serde(tag = "type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AgUiEvent {
     #[serde(rename_all = "camelCase")]
-    TextMessageStart {
-        message_id: String,
-        role: String,
-    },
+    TextMessageStart { message_id: String, role: String },
     #[serde(rename_all = "camelCase")]
-    TextMessageContent {
-        message_id: String,
-        delta: String,
-    },
+    TextMessageContent { message_id: String, delta: String },
     #[serde(rename_all = "camelCase")]
-    TextMessageEnd {
-        message_id: String,
-    },
+    TextMessageEnd { message_id: String },
     #[serde(rename_all = "camelCase")]
     ToolCallStart {
         tool_call_id: String,
         tool_call_name: String,
     },
     #[serde(rename_all = "camelCase")]
-    ToolCallArgs {
-        tool_call_id: String,
-        delta: String,
-    },
+    ToolCallArgs { tool_call_id: String, delta: String },
     #[serde(rename_all = "camelCase")]
-    ToolCallEnd {
-        tool_call_id: String,
-    },
+    ToolCallEnd { tool_call_id: String },
     #[serde(rename_all = "camelCase")]
     ToolCallResult {
         message_id: String,
@@ -211,6 +198,10 @@ pub struct SettingsSnapshot {
     pub base_url: String,
     pub model: String,
     pub api_key_set: bool,
+    pub temperature: f64,
+    pub max_tokens: Option<u32>,
+    pub instructions: Option<String>,
+    pub weather_tool: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -222,6 +213,16 @@ pub struct SettingsPatch {
     pub model: Option<String>,
     #[serde(default)]
     pub api_key: Option<String>,
+    #[serde(default)]
+    pub temperature: Option<f64>,
+    #[serde(default)]
+    pub max_tokens: Option<u32>,
+    #[serde(default)]
+    pub instructions: Option<String>,
+    #[serde(default)]
+    pub weather_tool: Option<bool>,
+    #[serde(default)]
+    pub remove_api_key: Option<bool>,
 }
 
 #[cfg(test)]
@@ -291,5 +292,18 @@ mod tests {
         let text = r#"{"id":"m2","role":"user","content":[{"type":"text","text":"hi"}]}"#;
         let message: ChatMessage = serde_json::from_str(text).expect("must parse");
         assert_eq!(message.content.expect("content").as_text(), "hi");
+    }
+
+    #[test]
+    fn settings_patch_accepts_the_frontend_shape() {
+        let patch: SettingsPatch = serde_json::from_str(
+            r#"{"temperature":1.1,"maxTokens":512,"instructions":"Be brief.","weatherTool":false,"removeApiKey":true}"#,
+        )
+        .expect("patch must parse");
+        assert_eq!(patch.temperature, Some(1.1));
+        assert_eq!(patch.max_tokens, Some(512));
+        assert_eq!(patch.instructions.as_deref(), Some("Be brief."));
+        assert_eq!(patch.weather_tool, Some(false));
+        assert_eq!(patch.remove_api_key, Some(true));
     }
 }

@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="5 5 54 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="helios-orb" cx="0.35" cy="0.28" r="0.8">
+      <stop stop-color="#FFF1C7"/>
+      <stop offset="0.5" stop-color="#FFD06A"/>
+      <stop offset="1" stop-color="#F28C3C"/>
+    </radialGradient>
+    <linearGradient id="helios-ray" x1="14" y1="50" x2="50" y2="14" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F28C3C"/>
+      <stop offset="0.5" stop-color="#FFAD3D"/>
+      <stop offset="1" stop-color="#FFC24B"/>
+    </linearGradient>
+  </defs>
+  <g stroke="url(#helios-ray)" stroke-width="3.4" stroke-linecap="round">
+    <path d="M16.1 16.1 8 8"/>
+    <path d="M47.9 16.1 56 8"/>
+    <path d="M16.1 47.9 8 56"/>
+    <path d="M47.9 47.9 56 56"/>
+  </g>
+  <circle cx="32" cy="32" r="15" fill="url(#helios-orb)"/>
+</svg>

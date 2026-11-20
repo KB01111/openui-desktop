@@ -1,4 +1,4 @@
-# OpenUI Desktop
+# Helios AI
 
 A native Windows desktop app for generative UI chat, ported from the
 [OpenUI self-hosted template](https://github.com/thesysdev/openui/tree/main/templates/openui-self-hosted)
@@ -48,7 +48,7 @@ npm run desktop:build
 ```
 
 Outputs an NSIS installer at
-`src-tauri/target/release/bundle/nsis/OpenUI Desktop_<version>_x64-setup.exe`,
+`src-tauri/target/release/bundle/nsis/Helios AI_<version>_x64-setup.exe`,
 installing per-user by default.
 
 ## How it fits together
