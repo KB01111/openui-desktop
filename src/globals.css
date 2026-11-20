@@ -61,7 +61,7 @@ strong {
 }
 
 /* The window is the page: the shell never scrolls, only its inner panels do. */
-.openui-desktop-shell {
+.helios-shell {
   height: 100dvh;
   overflow: hidden;
 }
@@ -77,8 +77,71 @@ img {
   -webkit-user-drag: none;
 }
 
-/* Settings route: library tokens only, so it follows light/dark by itself. */
-.openui-desktop-settings {
+/* Helios AI lockup: sun mark and wordmark share the sidebar header's slot. */
+.helios-wordmark {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.helios-wordmark img.helios-wordmark__mark {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.helios-wordmark__name {
+  font-size: 18px;
+  font-weight: 600;
+  font-variation-settings: "wght" 600;
+  letter-spacing: -0.015em;
+  line-height: 1;
+  color: var(--openui-text-neutral-primary);
+}
+
+.helios-wordmark__ai {
+  margin-left: 5px;
+  font-size: 0.78em;
+  font-weight: 500;
+  font-variation-settings: "wght" 500;
+  letter-spacing: 0.08em;
+  color: var(--openui-text-neutral-tertiary);
+}
+
+/* Welcome screen: the sun replaces the library mascot, with a soft float. */
+.helios-welcome-mark {
+  width: 112px;
+  height: 112px;
+  display: block;
+  filter: drop-shadow(0 10px 28px rgba(242, 140, 60, 0.28));
+  animation: helios-float 7s ease-in-out infinite;
+}
+
+@keyframes helios-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helios-welcome-mark {
+    animation: none;
+  }
+}
+
+/* Settings route: library tokens only, so it follows light/dark by itself. The
+   accent is scoped to Helios amber so controls match the mark. */
+.helios-settings {
+  --openui-interactive-accent-default: #f08a3c;
+  --openui-interactive-accent-hover: #e2762a;
+  --openui-interactive-accent-pressed: #cf651d;
+  --openui-interactive-accent-disabled: rgba(240, 138, 60, 0.4);
+  --openui-border-accent: rgba(240, 138, 60, 0.24);
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -87,7 +150,7 @@ img {
   padding: var(--openui-space-3xl) var(--openui-space-l);
 }
 
-.openui-desktop-settings__panel {
+.helios-settings__panel {
   width: 100%;
   max-width: 560px;
   display: flex;
@@ -96,7 +159,7 @@ img {
   gap: var(--openui-space-m);
 }
 
-.openui-desktop-settings__header {
+.helios-settings__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -104,7 +167,7 @@ img {
   width: 100%;
 }
 
-.openui-desktop-settings__title {
+.helios-settings__title {
   margin: 0;
   font: var(--openui-text-heading-md);
   letter-spacing: var(--openui-text-heading-md-letter-spacing);
@@ -113,7 +176,7 @@ img {
   color: var(--openui-text-neutral-primary);
 }
 
-.openui-desktop-settings__subtitle {
+.helios-settings__subtitle {
   margin: var(--openui-space-2xs) 0 0;
   max-width: 46ch;
   font: var(--openui-text-body-sm);
@@ -122,7 +185,7 @@ img {
   color: var(--openui-text-neutral-secondary);
 }
 
-.openui-desktop-settings__badge {
+.helios-settings__badge {
   display: inline-flex;
   align-items: center;
   gap: var(--openui-space-xs);
@@ -136,7 +199,7 @@ img {
   color: var(--openui-text-neutral-secondary);
 }
 
-.openui-desktop-settings__dot {
+.helios-settings__dot {
   width: 6px;
   height: 6px;
   flex-shrink: 0;
@@ -144,15 +207,15 @@ img {
   background-color: var(--openui-text-neutral-tertiary);
 }
 
-.openui-desktop-settings__badge.is-set .openui-desktop-settings__dot {
+.helios-settings__badge.is-set .helios-settings__dot {
   background-color: var(--openui-text-success-primary);
 }
 
-.openui-desktop-settings__badge.is-unset .openui-desktop-settings__dot {
+.helios-settings__badge.is-unset .helios-settings__dot {
   background-color: var(--openui-text-alert-primary);
 }
 
-.openui-desktop-settings__notice {
+.helios-settings__notice {
   width: 100%;
   margin: 0;
   padding: var(--openui-space-s) var(--openui-space-m);
@@ -164,12 +227,19 @@ img {
   font-variation-settings: var(--openui-font-variation-regular);
 }
 
-.openui-desktop-settings__notice.is-error {
+.helios-settings__notice.is-error {
   background-color: var(--openui-danger-background);
   color: var(--openui-text-danger-primary);
 }
 
-.openui-desktop-settings__card {
+.helios-settings__form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--openui-space-m);
+}
+
+.helios-settings__card {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -180,43 +250,138 @@ img {
   background-color: var(--openui-sunk-light);
 }
 
-.openui-desktop-settings__field {
+.helios-settings__section-heading {
   display: flex;
   flex-direction: column;
-  gap: var(--openui-space-xs);
+  gap: var(--openui-space-3xs);
 }
 
-.openui-desktop-settings__label {
-  font: var(--openui-text-label-sm);
-  letter-spacing: var(--openui-text-label-sm-letter-spacing);
-  font-variation-settings: var(--openui-font-variation-medium);
+.helios-settings__section-title {
+  margin: 0;
+  font: var(--openui-text-heading-xs);
+  letter-spacing: var(--openui-text-heading-xs-letter-spacing);
   color: var(--openui-text-neutral-primary);
 }
 
-.openui-desktop-settings__hint {
+.helios-settings__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--openui-space-xs);
+}
+
+.helios-settings__segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--openui-border-default);
+  border-radius: var(--openui-radius-full);
+  background-color: var(--openui-highlight-subtle);
+}
+
+.helios-settings__segment {
+  border: 0;
+  border-radius: var(--openui-radius-full);
+  padding: 6px 0;
+  font: var(--openui-text-label-xs);
+  letter-spacing: var(--openui-text-label-xs-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-medium);
+  color: var(--openui-text-neutral-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.helios-settings__segment.is-active {
+  color: var(--openui-text-neutral-primary);
+  background-color: var(--openui-foreground);
+  box-shadow: var(--openui-shadow-s);
+}
+
+.helios-settings__section-copy {
+  margin: 0;
   font: var(--openui-text-body-xs);
   letter-spacing: var(--openui-text-body-xs-letter-spacing);
   font-variation-settings: var(--openui-font-variation-regular);
   color: var(--openui-text-neutral-tertiary);
 }
 
-.openui-desktop-settings__actions {
+.helios-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--openui-space-xs);
+}
+
+.helios-settings__field .openui-slider-wrapper,
+.helios-settings__field .openui-textarea {
+  width: 100%;
+}
+
+.helios-settings__field .openui-slider-range {
+  background: linear-gradient(90deg, #ffb347, #f76b3c);
+}
+
+.helios-settings__field .openui-slider-thumb-handle-inner-dot {
+  background-color: #f07b32;
+}
+
+.helios-settings__field .openui-textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.helios-settings__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--openui-space-s);
+}
+
+.helios-settings__value {
+  min-width: 2.5rem;
+  padding: 2px var(--openui-space-xs);
+  border: 1px solid var(--openui-border-default);
+  border-radius: var(--openui-radius-full);
+  background-color: var(--openui-highlight-subtle);
+  font: var(--openui-text-label-xs);
+  letter-spacing: var(--openui-text-label-xs-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-medium);
+  color: var(--openui-text-neutral-secondary);
+  text-align: center;
+}
+
+.helios-settings__label {
+  font: var(--openui-text-label-sm);
+  letter-spacing: var(--openui-text-label-sm-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-medium);
+  color: var(--openui-text-neutral-primary);
+}
+
+.helios-settings__hint {
+  font: var(--openui-text-body-xs);
+  letter-spacing: var(--openui-text-body-xs-letter-spacing);
+  font-variation-settings: var(--openui-font-variation-regular);
+  color: var(--openui-text-neutral-tertiary);
+}
+
+.helios-settings__actions {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: var(--openui-space-m);
+  padding-top: var(--openui-space-2xs);
 }
 
-.openui-desktop-settings__status {
+.helios-settings__status {
   margin: 0;
   font: var(--openui-text-body-xs);
   letter-spacing: var(--openui-text-body-xs-letter-spacing);
   font-variation-settings: var(--openui-font-variation-regular);
 }
 
-.openui-desktop-settings__status.is-ok {
+.helios-settings__status.is-ok {
   color: var(--openui-text-success-primary);
 }
 
-.openui-desktop-settings__status.is-error {
+.helios-settings__status.is-error {
   color: var(--openui-text-danger-primary);
 }

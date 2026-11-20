@@ -9,7 +9,8 @@ use tauri::{AppHandle, State};
 
 use crate::agent::{self, AgentContext};
 use crate::contract::{
-    ChatFrame, ChatMessage, ChatRunRequest, SettingsPatch, SettingsSnapshot, StoredThread, ThreadList,
+    ChatFrame, ChatMessage, ChatRunRequest, SettingsPatch, SettingsSnapshot, StoredThread,
+    ThreadList,
 };
 use crate::settings;
 use crate::store::{self, ThreadStore};
@@ -78,7 +79,12 @@ pub fn save_settings(app: AppHandle, patch: SettingsPatch) -> Result<SettingsSna
 /// treats a cancellation as a clean stop rather than a failure.
 #[tauri::command]
 pub fn cancel_chat(state: State<'_, AppState>, run_id: String) {
-    if let Some(flag) = state.runs.lock().ok().and_then(|runs| runs.get(&run_id).cloned()) {
+    if let Some(flag) = state
+        .runs
+        .lock()
+        .ok()
+        .and_then(|runs| runs.get(&run_id).cloned())
+    {
         flag.store(true, Ordering::Relaxed);
     }
 }
@@ -129,7 +135,7 @@ async fn run_chat(
     };
 
     let client = reqwest::Client::builder()
-        .user_agent("openui-desktop/0.1")
+        .user_agent("helios-ai/0.1")
         .build()
         .map_err(|error| format!("Could not initialize the HTTP client: {error}"))?;
 
@@ -138,6 +144,10 @@ async fn run_chat(
         base_url: resolved.base_url,
         model: resolved.model,
         api_key,
+        temperature: resolved.temperature,
+        max_tokens: resolved.max_tokens,
+        instructions: resolved.instructions,
+        weather_tool: resolved.weather_tool,
         cancelled: cancelled.clone(),
     };
 

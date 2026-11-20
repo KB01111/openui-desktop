@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    openui_desktop_lib::run()
+    helios_ai_lib::run()
 }

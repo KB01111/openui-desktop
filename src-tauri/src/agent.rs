@@ -21,6 +21,10 @@ pub struct AgentContext {
     pub base_url: String,
     pub model: String,
     pub api_key: String,
+    pub temperature: f64,
+    pub max_tokens: Option<u32>,
+    pub instructions: Option<String>,
+    pub weather_tool: bool,
     pub cancelled: Arc<AtomicBool>,
 }
 
@@ -34,12 +38,24 @@ fn is_cancelled(cancelled: &AtomicBool) -> bool {
     cancelled.load(Ordering::Relaxed)
 }
 
-/// Builds the Chat Completions history: the OpenUI system prompt first, then
-/// the thread exactly as the frontend holds it.
-fn seed_messages(history: &[ChatMessage]) -> Vec<ChatMessage> {
+/// Builds the Chat Completions history: the OpenUI system prompt first, with
+/// any user instructions appended, then the thread exactly as the frontend
+/// holds it.
+fn seed_messages(history: &[ChatMessage], instructions: Option<&str>) -> Vec<ChatMessage> {
+    let mut system = SYSTEM_PROMPT.to_string();
+    if let Some(instructions) = instructions.map(str::trim).filter(|text| !text.is_empty()) {
+        system.push_str("\n\n## Additional user instructions\n\n");
+        system.push_str(instructions);
+    }
+
     let mut messages = Vec::with_capacity(history.len() + 1);
-    messages.push(ChatMessage::text("system", "system", SYSTEM_PROMPT));
-    messages.extend(history.iter().filter(|message| message.role != "system").cloned());
+    messages.push(ChatMessage::text("system", "system", system));
+    messages.extend(
+        history
+            .iter()
+            .filter(|message| message.role != "system")
+            .cloned(),
+    );
     messages
 }
 
@@ -68,7 +84,13 @@ where
         api_key: &context.api_key,
         model: &context.model,
         messages: messages.iter().map(WireMessage::from).collect(),
-        tools: tools::specs(),
+        tools: if context.weather_tool {
+            tools::specs()
+        } else {
+            Vec::new()
+        },
+        temperature: context.temperature,
+        max_tokens: context.max_tokens,
     };
 
     let flag = cancelled.clone();
@@ -126,7 +148,7 @@ pub async fn run<F>(
 where
     F: FnMut(ChatFrame) + Send,
 {
-    let mut messages = seed_messages(history);
+    let mut messages = seed_messages(history, context.instructions.as_deref());
     let mut produced = Vec::new();
     let cancelled = context.cancelled.clone();
 
@@ -188,8 +210,12 @@ where
                 },
             });
 
-            let content =
-                tools::run(&context.client, &call.function.name, &call.function.arguments).await;
+            let content = tools::run(
+                &context.client,
+                &call.function.name,
+                &call.function.arguments,
+            )
+            .await;
 
             emit(ChatFrame::Event {
                 event: AgUiEvent::ToolCallResult {
@@ -202,8 +228,11 @@ where
                 },
             });
 
-            let result_message =
-                ChatMessage::tool_result(uuid::Uuid::new_v4().to_string(), call.id.clone(), content);
+            let result_message = ChatMessage::tool_result(
+                uuid::Uuid::new_v4().to_string(),
+                call.id.clone(),
+                content,
+            );
             produced.push(result_message.clone());
             messages.push(result_message);
         }
@@ -229,7 +258,7 @@ mod tests {
             ChatMessage::text("s", "system", "stale"),
             ChatMessage::text("u", "user", "hi"),
         ];
-        let seeded = seed_messages(&history);
+        let seeded = seed_messages(&history, None);
         assert_eq!(seeded.len(), 2);
         assert_eq!(seeded[0].role, "system");
         assert_eq!(seeded[1].role, "user");
@@ -238,6 +267,14 @@ mod tests {
             .as_ref()
             .map(|content| content.as_text().len() > 1000)
             .unwrap_or(false));
+    }
+
+    #[test]
+    fn custom_instructions_are_appended_to_the_system_prompt() {
+        let seeded = seed_messages(&[], Some("  Keep answers short.  "));
+        let system = seeded[0].content.as_ref().expect("system prompt").as_text();
+        assert!(system.contains("Keep answers short."));
+        assert!(system.find("Keep answers short.").expect("instructions") > 1000);
     }
 
     #[test]

@@ -1,5 +1,5 @@
-// One mark for both themes: the mascot reads on light and dark surfaces.
-export const OPENUI_LOGO = "/openui-logo.svg";
+// One mark for both themes: the sun reads on light and dark surfaces.
+export const HELIOS_LOGO = "/helios-logo.svg";
 
 // No icon: starters show the default lightbulb.
 export const STARTERS = [
